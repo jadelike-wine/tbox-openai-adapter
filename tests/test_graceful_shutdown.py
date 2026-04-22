@@ -28,7 +28,7 @@ os.environ.setdefault("API_KEYS", "test-key")
 import httpx
 
 import app.services.tbox_client as tc
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.schemas.tbox import TBoxChatRequest
 from app.utils.errors import TBoxUpstreamError
 
@@ -246,3 +246,25 @@ async def test_close_client_drains_before_closing():
 
     assert drain_called_with == [15.0], "drain_streams should be called with the given timeout"
     assert aclose_called, "httpx client aclose() should be called after drain"
+
+
+@pytest.mark.anyio
+async def test_create_client_uses_raw_tbox_token_in_authorization_header():
+    _reset_module_state()
+    settings = Settings(tbox_token="TBox-example-token")
+    client = tc.create_client(settings)
+    try:
+        assert client.headers["Authorization"] == "TBox-example-token"
+    finally:
+        await tc.close_client(shutdown_timeout=0)
+
+
+@pytest.mark.anyio
+async def test_create_client_strips_bearer_prefix_from_tbox_token():
+    _reset_module_state()
+    settings = Settings(tbox_token="Bearer TBox-example-token")
+    client = tc.create_client(settings)
+    try:
+        assert client.headers["Authorization"] == "TBox-example-token"
+    finally:
+        await tc.close_client(shutdown_timeout=0)

@@ -23,7 +23,8 @@ from app.core.config import get_settings
 logger = logging.getLogger(__name__)
 
 # Paths that never require authentication
-_PUBLIC_PATHS = {"/health", "/metrics", "/docs", "/redoc", "/openapi.json"}
+_PUBLIC_PATHS = {"/", "/health", "/metrics", "/docs", "/redoc", "/openapi.json", "/playground"}
+_PUBLIC_PREFIXES = ("/playground-static/",)
 
 
 class ApiKeyAuthMiddleware(BaseHTTPMiddleware):
@@ -55,7 +56,7 @@ class ApiKeyAuthMiddleware(BaseHTTPMiddleware):
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> JSONResponse:
         # Skip auth for public paths
-        if request.url.path in _PUBLIC_PATHS:
+        if request.url.path in _PUBLIC_PATHS or request.url.path.startswith(_PUBLIC_PREFIXES):
             return await call_next(request)
 
         # Skip auth if not enabled

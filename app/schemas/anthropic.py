@@ -74,8 +74,8 @@ class AnthropicMessagesRequest(BaseModel):
     max_tokens: int = 1024
     stream: bool = False
 
-    # Optional system prompt
-    system: Optional[str] = None
+    # Optional system prompt: supports both plain string and typed text blocks
+    system: Optional[Union[str, list[AnthropicTextContent]]] = None
 
     # user is used as the session key (maps to TBox userId)
     # Anthropic uses metadata.user_id for this purpose

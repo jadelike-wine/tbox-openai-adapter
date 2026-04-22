@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TBox Adapter Playground</title>
+    <link rel="stylesheet" href="/playground-static/playground.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="panel control-panel">
+        <div class="panel-head">
+          <p class="eyebrow">Built-in Playground</p>
+          <h1>TBox Adapter Web UI</h1>
+          <p class="muted">
+            Test this adapter from the browser without adding a separate frontend project.
+          </p>
+        </div>
+
+        <label class="field">
+          <span>API Format</span>
+          <select id="apiFormat">
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>API Key</span>
+          <input id="apiKey" type="password" placeholder="Bearer token" />
+        </label>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>Model</span>
+            <input id="model" type="text" value="tbox-codex" />
+          </label>
+          <label class="field">
+            <span>User ID</span>
+            <input id="userId" type="text" value="demo-user" />
+          </label>
+        </div>
+
+        <label class="field textarea-field">
+          <span>System Prompt</span>
+          <textarea id="systemPrompt" rows="4" placeholder="Optional instruction"></textarea>
+        </label>
+
+        <div class="toggle-row">
+          <label class="toggle">
+            <input id="streamMode" type="checkbox" checked />
+            <span>Streaming</span>
+          </label>
+          <button id="loadModelsBtn" class="secondary-btn" type="button">Load Models</button>
+        </div>
+
+        <div class="model-list panel-card">
+          <div class="card-title">Available Models</div>
+          <div id="modelList" class="chip-list">
+            <span class="empty-chip">Not loaded</span>
+          </div>
+        </div>
+
+        <div class="upload-box panel-card">
+          <div class="card-title">Attach Files</div>
+          <input id="fileInput" type="file" multiple />
+          <button id="uploadBtn" class="secondary-btn" type="button">Upload Selected Files</button>
+          <div id="uploadStatus" class="mini-status">No files uploaded.</div>
+          <div id="attachmentList" class="attachment-list"></div>
+        </div>
+      </aside>
+
+      <main class="panel chat-panel">
+        <div class="chat-header">
+          <div>
+            <p class="eyebrow">Conversation</p>
+            <h2 id="chatTitle">OpenAI chat.completions</h2>
+          </div>
+          <div class="header-actions">
+            <button id="stopBtn" class="secondary-btn" type="button" disabled>Stop</button>
+            <button id="clearBtn" class="ghost-btn" type="button">Clear</button>
+          </div>
+        </div>
+
+        <div id="statusBar" class="status-bar">Ready.</div>
+        <section id="messageList" class="message-list"></section>
+
+        <form id="composer" class="composer">
+          <textarea
+            id="promptInput"
+            rows="4"
+            placeholder="Type your question here. Uploaded files will be attached to the next user message."
+          ></textarea>
+          <div class="composer-actions">
+            <div id="pendingAttachments" class="pending-attachments"></div>
+            <button id="sendBtn" class="primary-btn" type="submit">Send</button>
+          </div>
+        </form>
+      </main>
+    </div>
+
+    <template id="messageTemplate">
+      <article class="message">
+        <div class="message-role"></div>
+        <div class="message-body"></div>
+        <div class="message-files"></div>
+      </article>
+    </template>
+
+    <script src="/playground-static/playground.js"></script>
+  </body>
+  </html>

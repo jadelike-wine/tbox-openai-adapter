@@ -19,6 +19,7 @@ Client  ──(OpenAI API)────▶  tbox-openai-adapter  ──(TBox API)
 | OpenAI format | `http://localhost:2233/openai` | Compatible with OpenAI API spec |
 | Anthropic format | `http://localhost:2233/anthropic` | Compatible with Anthropic Claude API spec |
 | Legacy (backward compat) | `http://localhost:2233` | Same as OpenAI format, kept for old clients |
+| Built-in web playground | `http://localhost:2233/playground` | Browser UI for calling this adapter directly |
 
 ---
 
@@ -35,7 +36,8 @@ tbox-openai-adapter/
 │   │   ├── chat.py                # POST /v1/chat/completions  (OpenAI format)
 │   │   ├── anthropic.py           # POST /v1/messages          (Anthropic format)
 │   │   ├── conversations.py       # Conversation management CRUD
-│   │   └── files.py               # File upload / retrieval
+│   │   ├── files.py               # File upload / retrieval
+│   │   └── playground.py          # Built-in browser playground
 │   ├── services/
 │   │   ├── tbox_client.py         # Low-level TBox HTTP client (httpx)
 │   │   ├── chat_adapter.py        # OpenAI <-> TBox translation logic
@@ -47,9 +49,11 @@ tbox-openai-adapter/
 │   │   ├── openai.py              # Pydantic models for OpenAI shapes
 │   │   ├── anthropic.py           # Pydantic models for Anthropic shapes
 │   │   └── tbox.py                # Pydantic models for TBox shapes
-│   └── utils/
-│       ├── sse.py                 # SSE encoding / line-parsing helpers
-│       └── errors.py              # Custom exceptions + error response builder
+│   ├── utils/
+│   │   ├── sse.py                 # SSE encoding / line-parsing helpers
+│   │   └── errors.py              # Custom exceptions + error response builder
+│   └── web/
+│       └── static/                # Playground HTML/CSS/JS
 ├── tests/
 │   ├── conftest.py
 │   ├── test_models.py
@@ -88,7 +92,7 @@ Required variables:
 | Variable | Description |
 |---|---|
 | `TBOX_APP_ID` | Your TBox application ID |
-| `TBOX_TOKEN` | Your TBox Bearer token |
+| `TBOX_TOKEN` | Your TBox access token (raw value; do not add `Bearer ` prefix) |
 | `TBOX_BASE_URL` | TBox API base URL (default: `https://api.tbox.cn`) |
 | `TBOX_TIMEOUT` | Request timeout in seconds (default: `60`) |
 | `ADAPTER_MODEL_ID` | Model ID advertised to clients (default: `tbox-codex`) |
@@ -110,6 +114,7 @@ DEBUG=true python -m app.main
 The API docs are available at:
 - Swagger UI: `http://localhost:2233/docs`
 - ReDoc: `http://localhost:2233/redoc`
+- Browser playground: `http://localhost:2233/playground`
 
 ---
 

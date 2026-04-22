@@ -34,8 +34,8 @@ from app.utils.errors import TBoxUpstreamError
 from app.utils.sse import (
     SSE_DONE,
     format_sse_data,
-    iter_sse_lines,
-    parse_tbox_sse_line,
+    iter_sse_events,
+    parse_tbox_sse_event,
 )
 
 logger = logging.getLogger(__name__)
@@ -190,13 +190,16 @@ async def handle_chat_stream(
 
     try:
         async with tbox_client.chat_stream(tbox_req) as byte_iter:
-            async for raw_line in iter_sse_lines(byte_iter):
-                event_data = parse_tbox_sse_line(raw_line)
+            async for raw_event in iter_sse_events(byte_iter):
+                logger.debug("Processing raw SSE event: %r", raw_event)
+                event_data = parse_tbox_sse_event(raw_event)
                 if event_data is None:
+                    logger.debug("Skipped empty or invalid SSE event")
                     continue
 
                 event_type: str = event_data.get("event", "")
                 payload: dict = event_data.get("payload") or {}
+                logger.debug("Parsed SSE event: type=%r, payload=%s", event_type, payload)
 
                 if event_type == "header":
                     # TBox sends conversationId in the header event
@@ -239,6 +242,10 @@ async def handle_chat_stream(
                     })
                     yield SSE_DONE
                     return
+
+                elif event_type == "end":
+                    logger.debug("TBox stream end event received")
+                    break
 
                 else:
                     logger.debug("TBox unknown event type=%r payload=%s", event_type, payload)

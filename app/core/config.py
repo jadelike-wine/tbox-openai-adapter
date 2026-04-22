@@ -18,8 +18,8 @@ class Settings(BaseSettings):
 
     # ---- TBox upstream ----
     tbox_base_url: str = "https://api.tbox.cn"
-    tbox_app_id: str  # required — will raise ValidationError if missing
-    tbox_token: str   # required — will raise ValidationError if missing
+    tbox_app_id: str = ""  # optional for development/testing
+    tbox_token: str = ""   # optional for development/testing
     tbox_timeout: int = 60  # seconds
 
     # ---- Retry (exponential back-off, non-streaming requests only) ----
@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     # Comma-separated list of valid API keys.
     # If AUTH_REQUIRED=true and API_KEYS is empty, service startup fails.
     api_keys: str = ""
-    auth_required: bool = True
+    auth_required: bool = False
 
     # ---- Session store ----
     # TTL in seconds for session entries (default: 1 hour)

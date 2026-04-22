@@ -84,3 +84,50 @@ async def test_anthropic_file_block_is_forwarded_to_tbox():
     assert req.files is not None
     assert len(req.files) == 1
     assert req.files[0].fileId == "file_123"
+
+
+@pytest.mark.anyio
+async def test_anthropic_system_string_is_forwarded_to_tbox():
+    payload = {
+        "model": "claude-test",
+        "system": "You are a concise assistant.",
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": False,
+    }
+
+    with patch(
+        "app.services.tbox_client.chat_once",
+        new_callable=AsyncMock,
+        return_value={"conversationId": "conv-anth-3", "text": "ok"},
+    ) as mock_chat_once:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(MESSAGES_URL, json=payload, headers=AUTH_HEADERS)
+
+    assert response.status_code == 200
+    req = mock_chat_once.await_args.args[0]
+    assert req.systemPrompt == "You are a concise assistant."
+
+
+@pytest.mark.anyio
+async def test_anthropic_system_blocks_are_normalized_and_forwarded():
+    payload = {
+        "model": "claude-test",
+        "system": [
+            {"type": "text", "text": "Rule 1"},
+            {"type": "text", "text": "Rule 2"},
+        ],
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": False,
+    }
+
+    with patch(
+        "app.services.tbox_client.chat_once",
+        new_callable=AsyncMock,
+        return_value={"conversationId": "conv-anth-4", "text": "ok"},
+    ) as mock_chat_once:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(MESSAGES_URL, json=payload, headers=AUTH_HEADERS)
+
+    assert response.status_code == 200
+    req = mock_chat_once.await_args.args[0]
+    assert req.systemPrompt == "Rule 1\nRule 2"

@@ -38,8 +38,8 @@ from app.stores import session_store
 from app.utils.errors import TBoxUpstreamError
 from app.utils.sse import (
     SSE_DONE,
-    iter_sse_lines,
-    parse_tbox_sse_line,
+    iter_sse_events,
+    parse_tbox_sse_event,
 )
 
 logger = logging.getLogger(__name__)
@@ -75,6 +75,24 @@ def _get_user(request: AnthropicMessagesRequest, settings: Settings) -> str:
     return settings.adapter_default_user
 
 
+def _normalize_system_prompt(request: AnthropicMessagesRequest) -> str | None:
+    """
+    Normalize Anthropic 'system' field into a plain string for TBox.
+
+    Supports:
+      - string
+      - list of text blocks: [{"type":"text","text":"..."}]
+    """
+    system = request.system
+    if not system:
+        return None
+    if isinstance(system, str):
+        return system
+    texts = [block.text for block in system if hasattr(block, "text") and block.text]
+    merged = "\n".join(texts).strip()
+    return merged or None
+
+
 async def _build_tbox_request(
     request: AnthropicMessagesRequest,
     settings: Settings,
@@ -92,7 +110,7 @@ async def _build_tbox_request(
         userId=user,
         conversationId=conversation_id,
         stream=stream,
-        systemPrompt=request.system if request.system else None,
+        systemPrompt=_normalize_system_prompt(request),
         files=tbox_files,
     )
 
@@ -214,8 +232,8 @@ async def handle_messages_stream(
 
     try:
         async with tbox_client.chat_stream(tbox_req) as byte_iter:
-            async for raw_line in iter_sse_lines(byte_iter):
-                event_data = parse_tbox_sse_line(raw_line)
+            async for raw_event in iter_sse_events(byte_iter):
+                event_data = parse_tbox_sse_event(raw_event)
                 if event_data is None:
                     continue
 
@@ -257,6 +275,10 @@ async def handle_messages_stream(
                     )
                     yield SSE_DONE
                     stream_error = True
+                    break
+
+                elif event_type == "end":
+                    logger.debug("TBox stream end event received")
                     break
 
                 else:

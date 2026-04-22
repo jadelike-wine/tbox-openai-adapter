@@ -17,6 +17,7 @@ Client  ──(OpenAI API)────▶  tbox-openai-adapter  ──(TBox API)
 | OpenAI 格式 | `http://localhost:2233/openai` | 兼容 OpenAI API 规范 |
 | Anthropic 格式 | `http://localhost:2233/anthropic` | 兼容 Anthropic Claude API 规范 |
 | 旧版（向后兼容） | `http://localhost:2233` | 等同于 OpenAI 格式，保留以兼容老客户端 |
+| 内置 Web Playground | `http://localhost:2233/playground` | 浏览器里直接调试本服务 |
 
 ---
 
@@ -33,7 +34,8 @@ tbox-openai-adapter/
 │   │   ├── chat.py                # POST /v1/chat/completions  (OpenAI 格式)
 │   │   ├── anthropic.py           # POST /v1/messages          (Anthropic 格式)
 │   │   ├── conversations.py       # 会话管理 CRUD 接口
-│   │   └── files.py               # 文件上传 / 查询接口
+│   │   ├── files.py               # 文件上传 / 查询接口
+│   │   └── playground.py          # 内置浏览器调试页面
 │   ├── services/
 │   │   ├── tbox_client.py         # 底层 TBox HTTP 客户端（httpx）
 │   │   ├── chat_adapter.py        # OpenAI <-> TBox 翻译逻辑
@@ -45,9 +47,11 @@ tbox-openai-adapter/
 │   │   ├── openai.py              # OpenAI 格式的 Pydantic 模型
 │   │   ├── anthropic.py           # Anthropic 格式的 Pydantic 模型
 │   │   └── tbox.py                # TBox 格式的 Pydantic 模型
-│   └── utils/
-│       ├── sse.py                 # SSE 编解码 / 行解析工具
-│       └── errors.py              # 自定义异常 + 错误响应构建器
+│   ├── utils/
+│   │   ├── sse.py                 # SSE 编解码 / 行解析工具
+│   │   └── errors.py              # 自定义异常 + 错误响应构建器
+│   └── web/
+│       └── static/                # Playground HTML/CSS/JS
 ├── tests/
 │   ├── conftest.py
 │   ├── test_models.py
@@ -86,7 +90,7 @@ cp .env.example .env
 | 变量名 | 说明 | 默认值 |
 |---|---|---|
 | `TBOX_APP_ID` | TBox 应用 ID | **必填** |
-| `TBOX_TOKEN` | TBox Bearer 认证 Token | **必填** |
+| `TBOX_TOKEN` | TBox 访问令牌（原始值，不要加 `Bearer ` 前缀） | **必填** |
 | `TBOX_BASE_URL` | TBox API 基础 URL | `https://api.tbox.cn` |
 | `TBOX_TIMEOUT` | 请求超时时间（秒） | `60` |
 | `ADAPTER_MODEL_ID` | 对外暴露给客户端的模型 ID | `tbox-codex` |
@@ -108,6 +112,7 @@ DEBUG=true python -m app.main
 服务启动后可访问在线 API 文档：
 - Swagger UI：`http://localhost:2233/docs`
 - ReDoc：`http://localhost:2233/redoc`
+- 浏览器调试页：`http://localhost:2233/playground`
 
 ---
 

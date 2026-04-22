@@ -15,16 +15,18 @@ import logging
 import sys
 from contextlib import asynccontextmanager
 import json
+from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
 from app.middleware.auth import ApiKeyAuthMiddleware
 from app.middleware.metrics_middleware import MetricsMiddleware
-from app.routes import anthropic, chat, conversations, files, models
+from app.routes import anthropic, chat, conversations, files, models, playground
 from app.services import tbox_client
 from app.stores import session_store
 from app.utils.errors import TBoxUpstreamError, http_exception_handler, openai_error
@@ -73,6 +75,7 @@ def _configure_logging() -> None:
 _configure_logging()
 
 logger = logging.getLogger(__name__)
+WEB_STATIC_DIR = Path(__file__).resolve().parent / "web" / "static"
 
 
 # ---------------------------------------------------------------------------
@@ -98,9 +101,28 @@ async def lifespan(app: FastAPI):
     """
     settings = get_settings()
     tbox_client.create_client(settings)
+    # Get local IP for logging
+    import socket
+    def get_local_ip():
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+            return local_ip
+        except Exception:
+            return "127.0.0.1"
+
+    local_ip = get_local_ip()
+
     logger.info(
-        "tbox-openai-adapter started — model=%s port=%d",
+        "tbox-openai-adapter started — model=%s port=%d\n"
+        "  Local access:   http://127.0.0.1:%d\n"
+        "  Network access: http://%s:%d",
         settings.adapter_model_id,
+        settings.port,
+        settings.port,
+        local_ip,
         settings.port,
     )
     yield
@@ -169,6 +191,12 @@ def create_app() -> FastAPI:
     app.include_router(chat.router)
     app.include_router(conversations.router)
     app.include_router(files.router)
+    app.include_router(playground.router)
+    app.mount(
+        "/playground-static",
+        StaticFiles(directory=WEB_STATIC_DIR),
+        name="playground-static",
+    )
 
     # Global exception handler — wraps unhandled errors in OpenAI error shape
     @app.exception_handler(Exception)
@@ -191,6 +219,26 @@ def create_app() -> FastAPI:
             code="invalid_request_error",
             status_code=400,
         )
+
+    @app.get("/", tags=["root"])
+    async def root():
+        """Root endpoint - returns basic API information and available endpoints."""
+        return {
+            "message": "Welcome to tbox-openai-adapter",
+            "version": "0.1.0",
+            "documentation": {
+                "swagger_ui": "/docs",
+                "redoc": "/redoc",
+                "playground": "/playground",
+                "health": "/health"
+            },
+            "api_endpoints": {
+                "openai_format": "/openai/v1/...",
+                "anthropic_format": "/anthropic/v1/...",
+                "legacy_format": "/v1/..."
+            },
+            "description": "OpenAI-compatible API adapter for TBox workflows"
+        }
 
     @app.get("/health", tags=["health"])
     async def health_check():
@@ -232,6 +280,29 @@ app = create_app()
 
 if __name__ == "__main__":
     settings = get_settings()
+
+    # Get local IP address for network access
+    import socket
+    def get_local_ip():
+        try:
+            # Connect to a public DNS to get local IP
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+            return local_ip
+        except Exception:
+            return "127.0.0.1"
+
+    local_ip = get_local_ip()
+
+    print(f"🚀 Server starting up...")
+    print(f"📡 Local access:     http://127.0.0.1:{settings.port}")
+    print(f"🌐 Network access:   http://{local_ip}:{settings.port}")
+    print(f"🔧 Debug mode:       {'enabled' if settings.debug else 'disabled'}")
+    print(f"📊 Metrics enabled:  {'yes' if settings.metrics_enabled else 'no'}")
+    print("")
+
     uvicorn.run(
         "app.main:app",
         host=settings.host,

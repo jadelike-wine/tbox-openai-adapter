@@ -84,12 +84,19 @@ def create_client(settings: Settings) -> httpx.AsyncClient:
     _streams_idle = asyncio.Event()
     _streams_idle.set()
 
+    # Build headers - only include Authorization if token is provided.
+    # TBox OpenAPI expects the raw token value in Authorization, not
+    # "Bearer <token>". We still accept a mistakenly prefixed env value.
+    headers = {"Content-Type": "application/json"}
+    if settings.tbox_token:
+        token = settings.tbox_token.strip()
+        if token.lower().startswith("bearer "):
+            token = token[7:].strip()
+        headers["Authorization"] = token
+
     _client = httpx.AsyncClient(
         base_url=settings.tbox_base_url,
-        headers={
-            "Authorization": f"Bearer {settings.tbox_token}",
-            "Content-Type": "application/json",
-        },
+        headers=headers,
         timeout=httpx.Timeout(settings.tbox_timeout),
     )
 
@@ -361,6 +368,7 @@ async def chat_stream(request: TBoxChatRequest) -> AsyncIterator[AsyncIterator[b
                 TBOX_UPSTREAM_REQUESTS_TOTAL.labels(
                     operation="chat_stream", status="success"
                 ).inc()
+                logger.debug("TBox stream opened successfully, status=%d", response.status_code)
                 yield response.aiter_bytes()
         except httpx.RequestError as exc:
             tb_exc = TBoxUpstreamError(f"TBox stream request failed: {exc}")
